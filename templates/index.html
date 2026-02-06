@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Voice Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 1.1rem;
+        }
+
+        .languages {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .lang-badge {
+            background: rgba(124, 58, 237, 0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid rgba(124, 58, 237, 0.5);
+        }
+
+        .upload-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            border: 2px dashed rgba(255, 255, 255, 0.2);
+            text-align: center;
+            transition: all 0.3s ease;
+            margin-bottom: 30px;
+        }
+
+        .upload-section:hover {
+            border-color: #7c3aed;
+            background: rgba(124, 58, 237, 0.1);
+        }
+
+        .upload-section.dragover {
+            border-color: #00d4ff;
+            background: rgba(0, 212, 255, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        .upload-hint {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(90deg, #7c3aed, #00d4ff);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.4);
+        }
+
+        .upload-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 1.2rem;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-section {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .result-section.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-badge {
+            display: inline-block;
+            padding: 20px 60px;
+            border-radius: 50px;
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .result-badge.ai {
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+            box-shadow: 0 10px 30px rgba(255, 65, 108, 0.4);
+        }
+
+        .result-badge.human {
+            background: linear-gradient(90deg, #00b894, #00cec9);
+            box-shadow: 0 10px 30px rgba(0, 184, 148, 0.4);
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            border-radius: 15px;
+            transition: width 1s ease;
+        }
+
+        .confidence-fill.ai {
+            background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        }
+
+        .confidence-fill.human {
+            background: linear-gradient(90deg, #00b894, #00cec9);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #7c3aed;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: rgba(255, 65, 108, 0.2);
+            border: 1px solid #ff416c;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .warning-banner {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid #ffc107;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: none;
+        }
+
+        .warning-banner.show {
+            display: block;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎤 AI Voice Detection</h1>
+            <p class="subtitle">Detect whether an audio contains AI-generated or human voice</p>
+            <div class="languages">
+                <span class="lang-badge">English</span>
+                <span class="lang-badge">Hindi</span>
+                <span class="lang-badge">Tamil</span>
+                <span class="lang-badge">Telugu</span>
+                <span class="lang-badge">Malayalam</span>
+            </div>
+        </header>
+
+        <div class="warning-banner" id="warningBanner">
+            ⚠️ Model not trained yet. Please run <code>python train.py</code> first.
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">🎵</div>
+            <p class="upload-text">Drag & drop your audio file here</p>
+            <p class="upload-hint">Supports WAV, MP3, FLAC • Analyzes first 30 seconds</p>
+            <label class="upload-btn" for="audioFile">Choose File</label>
+            <input type="file" id="audioFile" accept=".wav,.mp3,.flac,.ogg,.m4a,audio/*">
+            
+            <div class="file-info" id="fileInfo">
+                <strong>Selected:</strong> <span id="fileName"></span>
+            </div>
+            
+            <button class="analyze-btn" id="analyzeBtn" disabled>🔍 Analyze Voice</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing audio... This may take a few seconds.</p>
+        </div>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="result-section" id="resultSection">
+            <div class="result-badge" id="resultBadge"></div>
+            
+            <div class="confidence-bar">
+                <div class="confidence-fill" id="confidenceFill"></div>
+            </div>
+            
+            <p id="confidenceText"></p>
+            
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Human Probability</div>
+                    <div class="stat-value" id="humanProb">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">AI Probability</div>
+                    <div class="stat-value" id="aiProb">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Audio Duration</div>
+                    <div class="stat-value" id="audioDuration">-</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Processing Time</div>
+                    <div class="stat-value" id="processingTime">-</div>
+                </div>
+            </div>
+            
+            <button class="analyze-btn" onclick="resetUpload()" style="margin-top: 30px;">
+                🔄 Analyze Another
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        const API_KEY = 'sk_multipass_987654321';
+        const uploadSection = document.getElementById('uploadSection');
+        const audioFile = document.getElementById('audioFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('resultSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const warningBanner = document.getElementById('warningBanner');
+
+        let selectedFile = null;
+
+        // Check model status on load
+        async function checkModelStatus() {
+            try {
+                const response = await fetch('/api/model-status');
+                const data = await response.json();
+                if (data.status === 'not_trained') {
+                    warningBanner.classList.add('show');
+                }
+            } catch (e) {
+                console.log('Could not check model status');
+            }
+        }
+        checkModelStatus();
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // File input change
+        audioFile.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            fileName.textContent = file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)';
+            fileInfo.classList.add('show');
+            analyzeBtn.disabled = false;
+        }
+
+        // Analyze button
+        analyzeBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            // Hide previous results
+            resultSection.classList.remove('show');
+            errorMessage.classList.remove('show');
+            uploadSection.style.display = 'none';
+            loading.classList.add('show');
+
+            try {
+                // Convert file to base64
+                const base64Audio = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(selectedFile);
+                });
+
+                const response = await fetch('/api/voice-detection', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        language: 'English',
+                        audioFormat: 'mp3',
+                        audioBase64: base64Audio
+                    })
+                });
+
+                const data = await response.json();
+
+                loading.classList.remove('show');
+
+                if (!response.ok || data.error) {
+                    showError(data.detail || data.message || 'An error occurred');
+                    return;
+                }
+
+                showResult(data);
+
+            } catch (error) {
+                loading.classList.remove('show');
+                showError('Failed to connect to server: ' + error.message);
+            }
+        });
+
+        function showResult(data) {
+            const resultBadge = document.getElementById('resultBadge');
+            const confidenceFill = document.getElementById('confidenceFill');
+            const confidenceText = document.getElementById('confidenceText');
+
+            const isAI = data.classification === 'AI_GENERATED';
+            const confidence = data.confidenceScore * 100;
+
+            resultBadge.textContent = isAI ? '🤖 AI Voice' : '👤 Human Voice';
+            resultBadge.className = 'result-badge ' + (isAI ? 'ai' : 'human');
+
+            confidenceFill.style.width = confidence + '%';
+            confidenceFill.className = 'confidence-fill ' + (isAI ? 'ai' : 'human');
+
+            confidenceText.textContent = `Confidence: ${confidence.toFixed(1)}%`;
+
+            // Calculate probabilities from confidence
+            const aiProb = isAI ? data.confidenceScore : (1 - data.confidenceScore);
+            const humanProb = isAI ? (1 - data.confidenceScore) : data.confidenceScore;
+            
+            document.getElementById('humanProb').textContent = 
+                (humanProb * 100).toFixed(1) + '%';
+            document.getElementById('aiProb').textContent = 
+                (aiProb * 100).toFixed(1) + '%';
+            document.getElementById('audioDuration').textContent = 
+                (data.segmentsAnalyzed || 1) + ' segments';
+            document.getElementById('processingTime').textContent = 
+                data.explanation || 'Multi-pass analysis';
+
+            resultSection.classList.add('show');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = '❌ ' + message;
+            errorMessage.classList.add('show');
+            uploadSection.style.display = 'block';
+        }
+
+        function resetUpload() {
+            selectedFile = null;
+            audioFile.value = '';
+            fileInfo.classList.remove('show');
+            analyzeBtn.disabled = true;
+            resultSection.classList.remove('show');
+            errorMessage.classList.remove('show');
+            uploadSection.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
